@@ -1,1 +1,4 @@
-build/*
+bin
+build
+.vscode
+a.out
