@@ -2,54 +2,47 @@
  * Copyright (C) 2021 Hunter Kohler <jhunterkohler@gmail.com>
  */
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "common.h"
 
-// clang-format off
 const char version[] = "1.0.0";
 const char usage[] =
-"Usage: mem-db [options]\n"
-"\n"
-" --host <hostname>     Server hostname. (Default: 127.0.0.1)\n"
-" --port <port>         Server port. (Default: 11111).\n"
-" --user <aut>"
-" --verbose                 Produce verbose output.\n"
-" --help                    Display this help message.\n"
-" --version                 Display versioning information.";
-// clang-format on
+    "Usage: mem-db-cli [options]\n"
+    "\n"
+    " --host <hostname>         Server hostname. (Default: 127.0.0.1)\n"
+    " --port <port>             Server port. (Default: 11111).\n"
+    " --help                    Display this help message.\n"
+    " --version                 Display versioning information.";
 
-struct config {
-    bool verbose;
+struct cli_cfg {
     char *hostname;
     uint16_t port;
 };
 
-noreturn void fatal_no_optarg(const char *arg)
+struct cli_cfg *getcfg(int argc, char **argv)
 {
-    fatal("Expected argument for option '%s'\n", arg);
-}
+    struct cli_cfg *cfg;
 
-struct config *parse_args(int argc, const char **argv)
-{
-    struct config *cfg = xzalloc(sizeof(*cfg));
+    if (!(cfg = calloc(1, sizeof(*cfg))))
+        goto err_alloc;
 
     int i;
-    for (i = 0; i < argc; i++) {
+    for (i = 1; i < argc; i++) {
         bool last = i + 1 == argc;
         const char *arg = argv[i];
 
         if (!strcmp(arg, "--host")) {
             if (last)
-                fatal_no_optarg(arg);
-            cfg->hostname = xstrdup(argv[++i]);
+                goto err_optarg;
+            if (!(cfg->hostname = strdup(argv[++i])))
+                goto err_alloc;
         } else if (!strcmp(arg, "--port")) {
             if (last)
-                fatal_no_optarg(arg);
+                goto err_optarg;
             cfg->port = atoi(argv[++i]);
-        } else if (!strcmp(arg, "--verbose")) {
-            cfg->verbose = true;
         } else if (!strcmp(arg, "--version")) {
             printf("%s\n", version);
             exit(0);
@@ -63,12 +56,27 @@ struct config *parse_args(int argc, const char **argv)
         }
     }
 
-    if (!cfg->hostname)
-        cfg->hostname = strdup("127.0.0.1");
+    if (!cfg->hostname && !(cfg->hostname = strdup("127.0.0.1")))
+        goto err_alloc;
     if (!cfg->port)
         cfg->port = 11111;
 
     return cfg;
+
+err_optarg:
+    fatal("Expected argument for option '%s'\n", arg);
+err_alloc:
+    fatal("Could not allocate memory\n");
 }
 
-int main() {}
+int repl_loop(struct cli_cfg *cfg)
+{
+    // while (true) {
+    // }
+}
+
+int main(int argc, char **argv)
+{
+    struct cli_cfg *cfg = getcfg(argc, argv);
+    repl_loop(cfg);
+}

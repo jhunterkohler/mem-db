@@ -9,9 +9,9 @@ AlignTrailingComments: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: false
 AllowShortEnumsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: Inline
+AllowShortFunctionsOnASingleLine: false
 AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: true
+AllowShortLoopsOnASingleLine: false
 AllowAllArgumentsOnNextLine: false
 AllowShortCaseLabelsOnASingleLine: false
 AllowShortLambdasOnASingleLine: All
@@ -48,7 +48,7 @@ FixNamespaceComments: false
 EmptyLineBeforeAccessModifier: Always
 BreakBeforeBinaryOperators: None
 BreakBeforeConceptDeclarations: true
-BreakBeforeTernaryOperators: false
+BreakBeforeTernaryOperators: true
 BitFieldColonSpacing: After
 ColumnLimit: 80
 ConstructorInitializerIndentWidth: 4

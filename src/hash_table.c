@@ -78,3 +78,137 @@ void hex(char *dest, const void *src, size_t bytes)
 
     dest[bytes << 1] = '\0';
 }
+
+int hash_table_keycmp(struct hash_table *table, void *key_a, void *key_b)
+{
+    return table->interface->key_cmp(table, key_a, key_b);
+}
+
+void *hash_table_setkey(struct hash_table *table,
+                        struct hash_table_entry *entry, void *key)
+{
+    if (entry->key != NULL)
+        hash_table_freekey(table, entry);
+
+    return entry->key = table->interface->key_dup
+                            ? table->interface->key_dup(table, key)
+                            : key;
+}
+
+void *hash_table_setval(struct hash_table *table,
+                        struct hash_table_entry *entry, void *val)
+{
+    if (entry->val != NULL)
+        hash_table_freeval(table, entry);
+
+    return entry->val = table->interface->val_dup
+                            ? table->interface->val_dup(table, val)
+                            : val;
+}
+
+void hash_table_freekey(struct hash_table *table,
+                        struct hash_table_entry *entry)
+{
+    if (table->interface->free_key)
+        table->interface->free_key(table, entry->key);
+}
+
+void hash_table_freeval(struct hash_table *table,
+                        struct hash_table_entry *entry)
+{
+    if (table->interface->free_val)
+        table->interface->free_val(table, entry->val);
+}
+
+uint64_t hash_table_hashkey(struct hash_table *table, const void *key)
+{
+    return table->interface->hash_fn(key);
+}
+
+struct hash_table_entry **hash_table_bucket(struct hash_table *table,
+                                            const void *key)
+{
+    return table->entries +
+           (hash_table_hashkey(table, key) % table->bucket_count);
+}
+
+int hash_table_insert(struct hash_table *table, void *key, void *val)
+{
+    table->entry_count += 1;
+
+    if (table->entry_count == table->bucket_count) {
+        int err = hash_table_rehash(table, 3 * table->bucket_count >> 1);
+        if (err)
+            return err;
+    }
+
+    struct hash_table_entry **bucket = hash_table_bucket(table, key);
+    struct hash_table_entry *last = NULL;
+    struct hash_table_entry *entry = *bucket;
+
+    while (entry && hash_table_keycmp(table, key, entry->key)) {
+        last = entry;
+        entry = entry->next;
+    }
+
+    if (!entry) {
+        if (!(entry = calloc(1, sizeof(*entry))))
+            return 1;
+
+        if (last)
+            last->next = entry;
+        else
+            *bucket = entry;
+
+        if (!hash_table_setkey(table, entry, key))
+            return 1;
+    }
+
+    if (!hash_table_setval(table, entry, val))
+        return 1;
+}
+
+int hash_table_rm(struct hash_table *table, void *key)
+{
+    struct hash_table_entry **bucket = hash_table_bucket(table, key);
+    struct hash_table_entry *entry = *bucket;
+
+    while (entry && !hash_table_keycmp(table, entry->key, key)) {
+        entry = entry->next;
+    }
+
+    if (entry) {
+        if (entry->prev)
+            entry->prev->next = entry->next;
+        else
+            *bucket = entry->next;
+
+        hash_table_freekey(table, entry);
+        hash_table_freeval(table, entry);
+        free(entry);
+
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+struct hash_table_entry *hash_table_get(struct hash_table *table, void *key)
+{
+    struct hash_table_entry *entry = *hash_table_bucket(table, key);
+    while (entry && hash_table_keycmp(table, entry->key, key))
+        entry = entry->next;
+    return entry;
+}
+
+struct hash_table *hash_table_create(struct hash_table_interface *interface)
+{
+    struct hash_table *table = malloc(sizeof(*table));
+
+    table->bucket_count = HASH_TABLE_INIT_BUCKET_COUNT;
+    table->entry_count = 0;
+    table->interface = interface;
+    table->entries = malloc(table->entry_count * sizeof(*table->entries));
+
+    return table;
+}
