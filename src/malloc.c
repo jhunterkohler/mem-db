@@ -3,7 +3,7 @@
 static inline void *check_alloc(void *mem)
 {
     if (!mem)
-        fatal_errno();
+        fatal(strerror("errno"));
     return mem;
 }
 
