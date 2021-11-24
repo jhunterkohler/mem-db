@@ -2,13 +2,14 @@ SHELL = bash
 
 CFLAGS := \
 	-std=c11 \
+	-O2 \
+	-fanalyzer \
 	-Wall \
 	-Wextra \
 	-Wno-unused-function \
 	-Wno-sign-compare \
 	-Wno-implicit-fallthrough \
-	-fanalyzer \
-	-O2
+	-Wno-switch
 
 CPPFLAGS := -MD -MP
 

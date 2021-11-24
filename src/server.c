@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 
 #include "common.h"
+#include "malloc.h"
 
 struct server_cfg {
     uint16_t port;
@@ -17,26 +18,22 @@ const char usage[] =
     " --help                   Display this help message.\n"
     " --version                Display versioning information.";
 
-struct server_cfg *cfg getcfg(int argc, char **argv)
+struct server_cfg *getcfg(int argc, char **argv)
 {
-    struct server_cfg *cfg = malloc(sizeof(*cfg));
-
-    if (!cfg)
-        goto err_alloc;
+    struct server_cfg *cfg = xmalloc(sizeof(*cfg));
 
     int i;
     for (i = 1; i < argc; i++) {
         bool last = i + 1 == argc;
-        const char *arg = argv[i];
 
-        if (!strcmp(arg, "--port")) {
+        if (!strcmp(argv[i], "--port")) {
             if (last)
                 goto err_optarg;
             cfg->port = atoi(argv[++i]);
-        } else if (!strcmp(arg, "--version")) {
+        } else if (!strcmp(argv[i], "--version")) {
             printf("%s\n", version);
             exit(0);
-        } else if (!strcmp(arg, "--help")) {
+        } else if (!strcmp(argv[i], "--help")) {
             printf("%s\n", usage);
             exit(0);
         } else if (argv[i][0] == '-') {
@@ -52,18 +49,17 @@ struct server_cfg *cfg getcfg(int argc, char **argv)
     return cfg;
 
 err_optarg:
-    fatal("Expected argument for option '%s'\n", arg);
-err_alloc:
-    fatal("Could not allocate memory\n");
+    fatal("Expected argument for option '%s'\n", argv[i]);
 }
 
 int server_loop(struct server_cfg *cfg)
 {
-    int fd_sock;
-    struct sockaddr_in *addr;
+    // int fd_sock;
+    // struct sockaddr_in *addr;
 
-    if(!(addr = malloc(sizeof(*addr)))
-        goto alloc_err;
+    printf("port: %d\n", cfg->port);
+
+    return 0;
 }
 
 int main(int argc, char **argv)

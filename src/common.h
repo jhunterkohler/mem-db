@@ -1,10 +1,12 @@
 #ifndef MEMDB_COMMON_H_
 #define MEMDB_COMMON_H_
 
-#include <stddef.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include <stdarg.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdnoreturn.h>
 #include <string.h>
 #include <errno.h>

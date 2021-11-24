@@ -1,39 +1,39 @@
 #include "malloc.h"
 
-void *xmalloc(size_t size)
+static inline void *check_alloc(void *mem)
 {
-    void *mem = malloc(size);
     if (!mem)
         fatal_errno();
     return mem;
+}
+
+void *zalloc(size_t size)
+{
+    return calloc(1, size);
+}
+
+void *memdup(void *src, size_t size)
+{
+    void *dest = malloc(size);
+    return dest ? memmove(dest, src, size) : NULL;
+}
+
+void *xmalloc(size_t size)
+{
+    return check_alloc(malloc(size));
 }
 
 void *xzalloc(size_t size)
 {
-    void *mem = calloc(1, size);
-    if (!mem)
-        fatal_errno();
-    return mem;
+    return check_alloc(zalloc(size));
 }
 
 void *xrealloc(void *ptr, size_t size)
 {
-    void *mem = realloc(ptr, size);
-    if (!mem)
-        fatal_errno();
-    return mem;
+    return check_alloc(realloc(ptr, size));
 }
 
 char *xstrdup(char *str)
 {
-    char *cpy = strdup(str);
-    if (!cpy)
-        fatal_errno();
-    return cpy;
-}
-
-void *xmemdup(void *src, size_t size)
-{
-    void *dest = xmalloc(size);
-    return memmove(dest, src, size);
+    return check_alloc(strdup(str));
 }

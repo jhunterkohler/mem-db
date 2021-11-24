@@ -5,7 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
+#include "malloc.h"
 #include "common.h"
 
 const char version[] = "1.0.0";
@@ -24,10 +26,7 @@ struct cli_cfg {
 
 struct cli_cfg *getcfg(int argc, char **argv)
 {
-    struct cli_cfg *cfg;
-
-    if (!(cfg = calloc(1, sizeof(*cfg))))
-        goto err_alloc;
+    struct cli_cfg *cfg = xzalloc(sizeof(*cfg));
 
     int i;
     for (i = 1; i < argc; i++) {
@@ -37,8 +36,7 @@ struct cli_cfg *getcfg(int argc, char **argv)
         if (!strcmp(arg, "--host")) {
             if (last)
                 goto err_optarg;
-            if (!(cfg->hostname = strdup(argv[++i])))
-                goto err_alloc;
+            cfg->hostname = xstrdup(argv[++i]);
         } else if (!strcmp(arg, "--port")) {
             if (last)
                 goto err_optarg;
@@ -56,23 +54,24 @@ struct cli_cfg *getcfg(int argc, char **argv)
         }
     }
 
-    if (!cfg->hostname && !(cfg->hostname = strdup("127.0.0.1")))
-        goto err_alloc;
+    if (!cfg->hostname)
+        cfg->hostname = xstrdup("127.0.0.1");
     if (!cfg->port)
         cfg->port = 11111;
 
     return cfg;
 
 err_optarg:
-    fatal("Expected argument for option '%s'\n", arg);
-err_alloc:
-    fatal("Could not allocate memory\n");
+    fatal("Expected argument for option '%s'\n", argv[i]);
 }
 
 int repl_loop(struct cli_cfg *cfg)
 {
-    // while (true) {
-    // }
+    printf("mem-db %s\n", version);
+    printf(">> ");
+
+    // printf("cfg->port = %s", cfg->hostname);
+    return 0;
 }
 
 int main(int argc, char **argv)

@@ -3,7 +3,14 @@
 
 #include <stdlib.h>
 
-size_t page_size();
-size_t core_count();
+/*
+ * Returns negative on failure.
+ */
+ssize_t page_size();
+
+/*
+ * Returns negative on failure.
+ */
+ssize_t core_count();
 
 #endif
