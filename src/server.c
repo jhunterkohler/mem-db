@@ -3,13 +3,43 @@
 #include <sys/types.h>
 #include <sys/event.h>
 #include <netinet/in.h>
+#include <unistd.h>
+#include <getopt.h>
+#include <ctype.h>
 
 #include "common.h"
 #include "sys.h"
 #include "thread_pool.h"
 #include "malloc.h"
 
-struct server_cfg {
+#define SERVER_BACKLOG 10
+#define DEFAULT_PORT 11111
+
+/*
+ * Returns negative value on invalid port. Ignores leading and trailing
+ * whitespace. `str` must be null temrinated.
+ */
+int parse_port(const char *str)
+{
+    while (isspace(*str))
+        str++;
+
+    int port = 0;
+    int i = 0;
+
+    if (*str == '0')
+        return -1;
+
+    while (isdigit(*str) && i++ < 5)
+        port = 10 * port + *str++ - '0';
+
+    while (isspace(*str))
+        str++;
+
+    return *str || port >= 1 << 16 || port <= 0 ? -1 : port;
+}
+
+struct server_config {
     uint16_t port;
 };
 
@@ -17,42 +47,70 @@ const char version[] = "1.0.0";
 const char usage[] =
     "Usage: mem-db-server [options]\n"
     "\n"
-    " --port <port>            Server port. (Default: 11111).\n"
-    " --help                   Display this help message.\n"
-    " --version                Display versioning information.";
+    " -p, --port <port>            Server port. (Default: 11111).\n"
+    " -h, --help                   Display this help message.\n"
+    " -v, --version                Display versioning information.";
 
-struct server_cfg *getcfg(int argc, char **argv)
+enum option_id {
+    OPTION_PORT = 'p',
+    OPTION_HELP = 'h',
+    OPTION_VERSION = 'v',
+};
+
+const struct option longopts[] = {
+    {   "port", required_argument, NULL,    OPTION_PORT},
+    {      "p", required_argument, NULL,    OPTION_PORT},
+    {"version",       no_argument, NULL, OPTION_VERSION},
+    {      "v",       no_argument, NULL, OPTION_VERSION},
+    {   "help",       no_argument, NULL,    OPTION_HELP},
+    {      "h",       no_argument, NULL,    OPTION_HELP},
+    {        0,                 0,    0,              0}
+};
+
+int server_getopt(int argc, char *const *argv, int *longindex)
 {
-    struct server_cfg *cfg = xmalloc(sizeof(*cfg));
+    return getopt_long_only(argc, argv, ":", longopts, longindex);
+}
 
-    int i;
-    for (i = 1; i < argc; i++) {
-        bool last = i + 1 == argc;
+int server_config_init(struct server_config *config, int argc,
+                       char *const *argv)
+{
+    int opt;
+    int longindex;
 
-        if (!strcmp(argv[i], "--port")) {
-            if (last)
-                goto err_optarg;
-            cfg->port = atoi(argv[++i]);
-        } else if (!strcmp(argv[i], "--version")) {
+    opterr = false;
+    optind = 1;
+    while ((opt = server_getopt(argc, argv, &longindex)) != -1) {
+        printf("opt = %c\n", opt);
+
+        switch (opt) {
+        case OPTION_PORT:
+            printf("optind = %d\n", optind);
+            int port = parse_port(optarg);
+            if (port < 0)
+                fatal("Invalid port: '%s'\n", optarg);
+            config->port = port;
+            break;
+        case OPTION_VERSION:
             printf("%s\n", version);
             exit(0);
-        } else if (!strcmp(argv[i], "--help")) {
+        case OPTION_HELP:
             printf("%s\n", usage);
             exit(0);
-        } else if (argv[i][0] == '-') {
-            fatal("Unknown option: '%s'\n%s\n", argv[i], usage);
-        } else {
-            fatal("Unexpected argument: '%s'\n%s\n", argv[i], usage);
+        case ':':
+            fatal("Expected argument for option: '%s'\n", argv[optind - 1]);
+        case '?':
+            fatal("Unknown option: '%s'\n", argv[optind - 1]);
         }
     }
 
-    if (!cfg->port)
-        cfg->port = 11111;
+    if (optind != argc)
+        fatal("Extraneous arguments.\n");
 
-    return cfg;
+    if (!config->port)
+        config->port = DEFAULT_PORT;
 
-err_optarg:
-    fatal("Expected argument for option '%s'\n", argv[i]);
+    return 0;
 }
 
 /*
@@ -200,6 +258,6 @@ int server_loop(struct server_config *cfg)
 
 int main(int argc, char **argv)
 {
-    struct server_cfg *cfg = getcfg(argc, argv);
-    server_loop(cfg);
+    struct server_config *config = xmalloc(sizeof(*config));
+    server_config_init(config, argc, argv);
 }
