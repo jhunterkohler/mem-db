@@ -21,6 +21,20 @@
         sizeof(a) / sizeof((a)[0]);                     \
     })
 
+#define max(a, b)              \
+    ({                         \
+        __auto_type __a = (a); \
+        __auto_type __b = (b); \
+        __a > __b ? __a : __b; \
+    })
+
+#define min(a, b)              \
+    ({                         \
+        __auto_type __a = (a); \
+        __auto_type __b = (b); \
+        __a < __b ? __a : __b; \
+    })
+
 noreturn static inline void fatal(const char *fmt, ...)
 {
     va_list ap;
