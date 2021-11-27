@@ -65,17 +65,18 @@ err_optarg:
     fatal("Expected argument for option '%s'\n", argv[i]);
 }
 
-int repl_loop(struct cli_cfg *cfg)
-{
-    printf("mem-db %s\n", version);
-    printf(">> ");
+// int repl_loop(struct cli_cfg *cfg)
+// {
+//     printf("mem-db %s\n", version);
+//     printf(">> ");
 
-    // printf("cfg->port = %s", cfg->hostname);
-    return 0;
-}
+//     // printf("cfg->port = %s", cfg->hostname);
+//     return 0;
+// }
 
 int main(int argc, char **argv)
 {
     struct cli_cfg *cfg = getcfg(argc, argv);
-    repl_loop(cfg);
+
+    printf("%d\n", cfg->port);
 }

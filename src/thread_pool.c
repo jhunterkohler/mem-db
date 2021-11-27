@@ -39,12 +39,10 @@ int thread_pool_init(struct thread_pool *tp, size_t thread_count)
     tp->thread_count = thread_count;
     tp->head = NULL;
     tp->tail = NULL;
-    tp->stopping = false;
-    tp->stopped_count = 0;
+    tp->stop = false;
 
-    pthread_mutex_init(&tp->mutex);
-    pthread_cond_init(&tp->event);
-    pthread_cond_init(&tp->all_stopped);
+    pthread_mutex_init(&tp->mutex, NULL);
+    pthread_cond_init(&tp->event, NULL);
 
     return 0;
 }
