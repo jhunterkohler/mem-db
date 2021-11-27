@@ -1,6 +1,9 @@
 #include "thread_pool.h"
 
-void thread_pool_loop(struct thread_pool *tp)
+/*
+ * Loop run by worker threads.
+ */
+static void thread_pool_loop(struct thread_pool *tp)
 {
     while (true) {
         pthread_mutex_lock(&tp->mutex);

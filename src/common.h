@@ -12,15 +12,25 @@
 #include <errno.h>
 #include <assert.h>
 
+/*
+ * Array type compatability check macro. Check portability with:
+ * `__has_builtin(__builtin_types_compatible_p)`.
+ */
 #define IS_ARRAY(a) \
     (!__builtin_types_compatible_p(__typeof(a), __typeof(&(a)[0])))
 
+/*
+ * Type-safe array size macro.
+ */
 #define ARRAY_SIZE(a)                                   \
     ({                                                  \
         static_assert(IS_ARRAY(a), "Non-static array"); \
         sizeof(a) / sizeof((a)[0]);                     \
     })
 
+/*
+ * Non-re-evaluting generic `max` macro.
+ */
 #define max(a, b)              \
     ({                         \
         __auto_type __a = (a); \
@@ -28,6 +38,9 @@
         __a > __b ? __a : __b; \
     })
 
+/*
+ * Non-re-evaluating generic `min` macro.
+ */
 #define min(a, b)              \
     ({                         \
         __auto_type __a = (a); \
