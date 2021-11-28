@@ -16,6 +16,84 @@
 #define DEFAULT_PORT 11111
 
 /*
+ * Socket wrapper for server. TCP, supporting IPv6 and IPv4.
+ *
+ * Note: Database protocol itself need-not be TCP specific, though depends on
+ * an equivalent streaming protocol, such as unix sockets.
+ */
+struct server_socket {
+    /*
+     * Open socket's file descriptor.
+     */
+    int fd;
+
+    /*
+     * Bound port in host byte order. Opposed to `addr.sin6_port`
+     * in network byte order.
+     */
+    uint16_t port;
+
+    struct sockaddr_in6 addr;
+};
+
+/*
+ * Initialize a IPv4 socket address. `port` must be in host byte order. If
+ * `sin_addr` is `NULL`, it defaults to assigning IPv4 any.
+ */
+void sockaddr_in_init(struct sockaddr_in *addr, in_port_t port,
+                      struct in_addr *sin_addr)
+{
+    addr->sin_len = sizeof(*addr);
+    addr->sin_family = AF_INET;
+    addr->sin_port = htons(port);
+    addr->sin_addr.s_addr = sin_addr ? sin_addr->s_addr : htonl(INADDR_ANY);
+    memset(&addr->sin_zero, 0, sizeof(addr->sin_zero));
+}
+
+/*
+ * Initialize a IPv6 socket address. `port` must be in host byte order. If
+ * `sin6_addr` is `NULL`, it defaults to assigning IPv6 any.
+ */
+void sockaddr_in6_init(struct sockaddr_in6 *addr, in_port_t port,
+                       struct in6_addr *sin6_addr)
+{
+    addr->sin6_len = sizeof(*addr);
+    addr->sin6_family = AF_INET6;
+    addr->sin6_port = htons(port);
+    addr->sin6_flowinfo = 0;
+    addr->sin6_addr = sin6_addr ? *sin6_addr : in6addr_any;
+    addr->sin6_scope_id = 0;
+}
+
+/*
+ * Argument `port` must be in host byte order. Uses IPv6 with socket option
+ * `IPV6_V6ONLY` off, thus using IPv4-mapped address, and making it impossible
+ * to bind with an IPv4 socket.
+ */
+int server_socket_init(struct server_socket *sock, in_port_t port,
+                       size_t backlog)
+{
+    sock->port = port;
+    sockaddr_in6_init(&sock->addr, sock->port, NULL);
+
+    if ((sock->fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP)) < 0)
+        return -1;
+
+    /*
+     * Set `IPV6_V6ONLY` explicitly for cross-platform compatibility.
+     */
+    if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, &(int){ 1 },
+                   sizeof(int)) ||
+        bind(sock->fd, &sock->addr, sizeof(sock->addr)) ||
+        listen(sock->fd, backlog)) {
+        close(sock->fd);
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
  * Returns negative value on invalid port. Ignores leading and trailing
  * whitespace. `str` must be null temrinated.
  */
