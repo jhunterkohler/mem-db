@@ -84,7 +84,7 @@ int server_socket_init(struct server_socket *sock, in_port_t port,
      */
     if (setsockopt(sock->fd, IPPROTO_IPV6, IPV6_V6ONLY, &(int){ 1 },
                    sizeof(int)) ||
-        bind(sock->fd, &sock->addr, sizeof(sock->addr)) ||
+        bind(sock->fd, (struct sockaddr *)&sock->addr, sizeof(sock->addr)) ||
         listen(sock->fd, backlog)) {
         close(sock->fd);
         return -1;
