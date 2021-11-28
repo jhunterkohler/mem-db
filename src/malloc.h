@@ -3,6 +3,11 @@
 
 #include "common.h"
 
+/*
+ * TODO: Consider static inlining all functions, or use macros for `x` memory
+ * allocations.
+ */
+
 void *zalloc(size_t size);
 void *memdup(void *src, size_t size);
 

@@ -72,8 +72,8 @@ int server_getopt(int argc, char *const *argv, int *longindex)
     return getopt_long_only(argc, argv, ":", longopts, longindex);
 }
 
-int server_config_init(struct server_config *config, int argc,
-                       char *const *argv)
+void server_config_init(struct server_config *config, int argc,
+                        char *const *argv)
 {
     int opt;
     int longindex;
@@ -81,11 +81,8 @@ int server_config_init(struct server_config *config, int argc,
     opterr = false;
     optind = 1;
     while ((opt = server_getopt(argc, argv, &longindex)) != -1) {
-        printf("opt = %c\n", opt);
-
         switch (opt) {
         case OPTION_PORT:
-            printf("optind = %d\n", optind);
             int port = parse_port(optarg);
             if (port < 0)
                 fatal("Invalid port: '%s'\n", optarg);
@@ -109,8 +106,6 @@ int server_config_init(struct server_config *config, int argc,
 
     if (!config->port)
         config->port = DEFAULT_PORT;
-
-    return 0;
 }
 
 /*
@@ -154,8 +149,8 @@ struct kqueue_table {
     struct kevent *eventlist;
 
     /*
-     * `changelist_cap` and `eventlist_cap` are struct internal for tracking
-     * the trivially associated array allocations.
+     * Fields `changelist_cap` and `eventlist_cap` are struct internals for
+     * tracking array allocations.
      */
     size_t changelist_cap;
     size_t eventlist_cap;
@@ -214,50 +209,44 @@ int kqueue_table_commit(struct kqueue_table *kt, int nevents,
 }
 
 /*
- * Note: Database protocol need-not be TCP specific, though depends on
- * an equivalent streaming protocol, such as unix sockets.
+ * TODO: Look into de-registering events on `kqueue_table` destruction.
  */
+void kqueue_table_destroy(struct kqueue_table *kt)
+{
+    free(kt->changelist);
+    free(kt->eventlist);
+}
+
 int server_loop(struct server_config *cfg)
 {
-    int fd_sock;
-    int kq;
-    struct kevent event;
-    struct sockaddr_in addr;
-    struct thread_pool tp;
+    int err;
+    struct kqueue_table *ktable;
+    struct thread_pool *threads;
 
-    thread_pool_init(&tp, core_count());
+    void *const mem = malloc(sizeof(*ktable) + sizeof(*threads));
 
-    // Networking
+    if (!mem)
+        return ENOMEM;
 
-    if ((fd_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-        fatal("socket: %s\n", strerror(errno));
+    ktable = mem;
+    threads = mem + sizeof(*ktable);
 
-    if (bind(fd_sock, (struct sockaddr *)&addr, sizeof(addr)))
-        fatal("bind: %s\n", strerror(errno));
+    if ((err = thread_pool_init(threads, 0)) ||
+        (err = kqueue_table_init(ktable)))
+        goto error;
 
-    if (listen(fd_sock, SERVER_BACKLOG))
-        fatal("listen: %s\n", strerror(errno));
-
-    // Kqueue
-
-    memset(&event, 0, sizeof(event));
-    event.ident = fd_sock;
-    event.filter = EVFILT_READ;
-    event.flags = EV_ADD;
-
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(cfg->port);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-    if ((kq = kqueue()) < 0)
-        fatal("kqueue: %s\n", strerror(errno));
-
+    free(mem);
     return 0;
+error:
+    free(mem);
+    return -1;
 }
 
 int main(int argc, char **argv)
 {
     struct server_config *config = xmalloc(sizeof(*config));
     server_config_init(config, argc, argv);
+
+    if (server_loop(config))
+        fatal_errno();
 }

@@ -58,4 +58,9 @@ noreturn static inline void fatal(const char *fmt, ...)
     exit(1);
 }
 
+noreturn static inline void fatal_errno()
+{
+    fatal("%s\n", strerror(errno));
+}
+
 #endif
