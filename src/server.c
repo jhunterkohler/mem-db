@@ -12,8 +12,8 @@
 #include "thread_pool.h"
 #include "malloc.h"
 
-#define SERVER_BACKLOG 10
-#define DEFAULT_PORT 11111
+#define SERVER_BACKLOG 128
+#define SERVER_DEFAULT_PORT 11111
 
 /*
  * Socket wrapper for server. TCP, supporting IPv6 and IPv4.
@@ -183,7 +183,7 @@ void server_config_init(struct server_config *config, int argc,
         fatal("Extraneous arguments.\n");
 
     if (!config->port)
-        config->port = DEFAULT_PORT;
+        config->port = SERVER_DEFAULT_PORT;
 }
 
 /*
@@ -304,7 +304,7 @@ int server_loop(struct server_config *cfg)
     void *const mem = malloc(sizeof(*ktable) + sizeof(*threads));
 
     if (!mem)
-        return ENOMEM;
+        return -1;
 
     ktable = mem;
     threads = mem + sizeof(*ktable);
@@ -322,9 +322,44 @@ error:
 
 int main(int argc, char **argv)
 {
-    struct server_config *config = xmalloc(sizeof(*config));
-    server_config_init(config, argc, argv);
+    struct server_config config;
+    struct server_socket sock;
+    struct kqueue_table ktable;
+    struct thread_pool tpool;
 
-    if (server_loop(config))
-        fatal_errno();
+    if (!thread_pool_init(&tpool, core_count()))
+        fatal("thread_pool_init");
+
+    if (!kqueue_table_init(&ktable))
+        fatal("kqueue_table_init");
+
+    if (!server_socket_init(&sock, config->port, SERVER_BACKLOG))
+        fatal("server_socket_init");
+
+    while (true) {
+    }
+
+    // void *const mem = malloc(sizeof(*ktable) + sizeof(*threads));
+
+    // struct server_config *const config = xmalloc(sizeof(*config));
+    // server_config_init(config, argc, argv);
+
+    // if (server_loop(config))
+    //     fatal_errno();
+
+    // int err;
+    // struct kqueue_table *ktable;
+    // struct thread_pool *threads;
+
+    // void *const mem = malloc(sizeof(*ktable) + sizeof(*threads));
+
+    // if (!mem)
+    //     return -1;
+
+    // ktable = mem;
+    // threads = mem + sizeof(*ktable);
+
+    // if ((err = thread_pool_init(threads, 0)) ||
+    //     (err = kqueue_table_init(ktable)))
+    //     goto error;
 }
