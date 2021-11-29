@@ -12,40 +12,44 @@
 #include <errno.h>
 #include <assert.h>
 
-/*
- * Array type compatability check macro. Check portability with:
- * `__has_builtin(__builtin_types_compatible_p)`.
- */
-#define IS_ARRAY(a) \
-    (!__builtin_types_compatible_p(__typeof(a), __typeof(&(a)[0])))
+#define __static_assert _Static_assert
 
-/*
- * Type-safe array size macro.
- */
-#define ARRAY_SIZE(a)                                   \
-    ({                                                  \
-        static_assert(IS_ARRAY(a), "Non-static array"); \
-        sizeof(a) / sizeof((a)[0]);                     \
+#define __types_compatible(a, b) \
+    __builtin_types_compatible_p(__typeof(a), __typeof(b))
+
+#define __is_array(a) (!__types_compatible((a), &(a)[0]))
+
+#define __static_assert_array(a) \
+    __static_assert(__is_array(a), "Non-array type: " #a)
+
+#define ARRAY_SIZE(a)               \
+    ({                              \
+        __static_assert_array(a);   \
+        sizeof(a) / sizeof((a)[0]); \
     })
 
-/*
- * Non-re-evaluting generic `max` macro.
- */
-#define max(a, b)              \
-    ({                         \
-        __auto_type __a = (a); \
-        __auto_type __b = (b); \
-        __a > __b ? __a : __b; \
+#define max(a, b)                                                            \
+    ({                                                                       \
+        __typeof(a) __a = (a);                                               \
+        __typeof(b) __b = (b);                                               \
+        __static_assert(__types_compatible(a, b),                            \
+                        "max(" #a "," #b ") called on incompatible types."); \
+        __a > __b ? __a : __b;                                               \
     })
 
-/*
- * Non-re-evaluating generic `min` macro.
- */
-#define min(a, b)              \
-    ({                         \
-        __auto_type __a = (a); \
-        __auto_type __b = (b); \
-        __a < __b ? __a : __b; \
+#define min(a, b)                                                            \
+    ({                                                                       \
+        __typeof(a) __a = (a);                                               \
+        __typeof(b) __b = (b);                                               \
+        __static_assert(__types_compatible(a, b),                            \
+                        "min(" #a "," #b ") called on incompatible types."); \
+        __a < __b ? __a : __b;                                               \
+    })
+
+#define container_of(ptr, type, member)                     \
+    ({                                                      \
+        const __typeof(((type *)0)->member) *__ptr = (ptr); \
+        (type *)((char *)__ptr - offsetof(type, member));   \
     })
 
 noreturn static inline void fatal(const char *fmt, ...)
