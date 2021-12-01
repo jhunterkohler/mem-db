@@ -3,15 +3,17 @@
 /*
  * Loop run by worker threads.
  */
-static void thread_pool_loop(struct thread_pool *tp)
+static void *thread_pool_loop(void *arg)
 {
+    struct thread_pool *tp = arg;
+
     while (true) {
         pthread_mutex_lock(&tp->mutex);
 
         while (!tp->head && !tp->stop)
             pthread_cond_wait(&tp->event, &tp->mutex);
 
-        if (tp->stop) {
+        if (tp->stop && !tp->head) {
             pthread_mutex_unlock(&tp->mutex);
             pthread_exit(NULL);
         }
@@ -46,6 +48,14 @@ int thread_pool_init(struct thread_pool *tp, size_t thread_count)
 
     pthread_mutex_init(&tp->mutex, NULL);
     pthread_cond_init(&tp->event, NULL);
+
+    pthread_mutex_lock(&tp->mutex);
+
+    for (int i = 0; i < thread_count; i++) {
+        pthread_create(&tp->threads[i], NULL, thread_pool_loop, tp);
+    }
+
+    pthread_mutex_unlock(&tp->mutex);
 
     return 0;
 }
